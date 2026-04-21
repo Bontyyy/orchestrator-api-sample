@@ -51,5 +51,8 @@ jobs:
       - name: Lint
         run: dotnet format --verify-no-changes --no-restore
 
+      - name: Security scan
+        run: ./.specfuse/scripts/security-scan.sh
+
       - name: Release build
         run: dotnet build --no-restore --configuration Release

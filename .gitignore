@@ -13,6 +13,9 @@ coverage/
 *.opencover.xml
 TestResults/
 
+# Security scan reports
+security-scan.json
+
 # IDE
 .vs/
 .vscode/
