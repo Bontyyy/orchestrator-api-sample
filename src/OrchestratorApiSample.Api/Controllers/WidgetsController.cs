@@ -44,6 +44,21 @@ public sealed class WidgetsController : ControllerBase
 
         return widget is null ? NotFound() : Ok(widget);
     }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _service.DeleteAsync(id, cancellationToken);
+
+            return NoContent();
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { error = "validation_failed", field = ex.Field, reason = ex.Reason });
+        }
+    }
 }
 
 public sealed record CreateWidgetRequest(string Name, string Sku, int Quantity);

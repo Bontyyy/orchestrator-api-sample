@@ -65,4 +65,41 @@ public sealed class WidgetsControllerTests
         var ok = result.Result.Should().BeOfType<OkObjectResult>().Which;
         ok.Value.Should().Be(createdWidget);
     }
+
+    [Fact]
+    public async Task Delete_with_existing_id_returns_NoContent_and_widget_is_gone()
+    {
+        var controller = BuildController();
+        var createResult = await controller.Create(
+            new CreateWidgetRequest("Gadget", "GAD-001", 5),
+            CancellationToken.None);
+        var createdWidget = ((CreatedAtActionResult)createResult.Result!).Value as Widget;
+
+        var deleteResult = await controller.Delete(createdWidget!.Id, CancellationToken.None);
+
+        deleteResult.Should().BeOfType<NoContentResult>();
+
+        var getResult = await controller.GetById(createdWidget.Id, CancellationToken.None);
+        getResult.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task Delete_with_unknown_id_returns_NoContent_idempotently()
+    {
+        var controller = BuildController();
+
+        var deleteResult = await controller.Delete("nonexistent-id", CancellationToken.None);
+
+        deleteResult.Should().BeOfType<NoContentResult>();
+    }
+
+    [Fact]
+    public async Task Delete_with_blank_id_returns_BadRequest_with_field_info()
+    {
+        var controller = BuildController();
+
+        var deleteResult = await controller.Delete("   ", CancellationToken.None);
+
+        deleteResult.Should().BeOfType<BadRequestObjectResult>();
+    }
 }

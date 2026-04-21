@@ -161,4 +161,49 @@ public sealed class WidgetServiceTests
         var ex = await act.Should().ThrowAsync<ValidationException>();
         ex.Which.Field.Should().Be("id");
     }
+
+    [Fact]
+    public async Task DeleteAsync_with_known_id_delegates_to_repository()
+    {
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.DeleteAsync("abc123", It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new WidgetService(repo.Object);
+
+        await service.DeleteAsync("abc123", CancellationToken.None);
+
+        repo.Verify(r => r.DeleteAsync("abc123", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_with_unknown_id_is_idempotent_and_still_delegates()
+    {
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new WidgetService(repo.Object);
+
+        var act = () => service.DeleteAsync("nonexistent", CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+        repo.Verify(r => r.DeleteAsync("nonexistent", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task DeleteAsync_with_blank_id_throws_ValidationException_and_skips_repository(string? id)
+    {
+        var repo = new Mock<IWidgetRepository>();
+        var service = new WidgetService(repo.Object);
+
+        var act = () => service.DeleteAsync(id!, CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<ValidationException>();
+        ex.Which.Field.Should().Be("id");
+        repo.Verify(r => r.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }
