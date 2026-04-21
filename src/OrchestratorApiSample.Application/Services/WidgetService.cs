@@ -34,6 +34,11 @@ public sealed class WidgetService
             throw new ValidationException(nameof(quantity), "must be non-negative");
         }
 
+        if (quantity > 10_000)
+        {
+            throw new ValidationException(nameof(quantity), "must be at most 10000");
+        }
+
         var widget = new Widget(
             Id: Guid.NewGuid().ToString("N"),
             Name: name.Trim(),

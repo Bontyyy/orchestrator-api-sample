@@ -80,6 +80,32 @@ public sealed class WidgetServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_with_quantity_above_ceiling_throws_ValidationException()
+    {
+        var service = new WidgetService(Mock.Of<IWidgetRepository>());
+
+        var act = () => service.CreateAsync("Gadget", "GAD-001", 10_001, CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<ValidationException>();
+        ex.Which.Field.Should().Be("quantity");
+        ex.Which.Reason.Should().Be("must be at most 10000");
+    }
+
+    [Fact]
+    public async Task CreateAsync_with_quantity_at_ceiling_is_allowed()
+    {
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.AddAsync(It.IsAny<Widget>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Widget w, CancellationToken _) => w);
+
+        var service = new WidgetService(repo.Object);
+
+        var widget = await service.CreateAsync("Gadget", "GAD-001", 10_000, CancellationToken.None);
+
+        widget.Quantity.Should().Be(10_000);
+    }
+
+    [Fact]
     public async Task CreateAsync_with_zero_quantity_is_allowed()
     {
         var repo = new Mock<IWidgetRepository>();
