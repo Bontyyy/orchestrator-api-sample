@@ -57,4 +57,14 @@ public sealed class WidgetService
 
         return _repository.GetByIdAsync(id, cancellationToken);
     }
+
+    public Task DeleteAsync(string id, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            throw new ValidationException(nameof(id), "must not be empty");
+        }
+
+        return _repository.DeleteAsync(id, cancellationToken);
+    }
 }

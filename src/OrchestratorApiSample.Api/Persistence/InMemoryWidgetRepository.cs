@@ -19,4 +19,10 @@ public sealed class InMemoryWidgetRepository : IWidgetRepository
         _store.TryGetValue(id, out var widget);
         return Task.FromResult(widget);
     }
+
+    public Task DeleteAsync(string id, CancellationToken cancellationToken)
+    {
+        _store.TryRemove(id, out _);
+        return Task.CompletedTask;
+    }
 }
