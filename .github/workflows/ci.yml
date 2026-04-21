@@ -1,0 +1,55 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verification:
+    name: verification gates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (warnings-as-errors)
+        run: dotnet build --no-restore /warnaserror
+
+      - name: Tests
+        run: dotnet test --no-build --nologo --verbosity normal
+
+      - name: Coverage
+        run: |
+          dotnet test --no-build --nologo \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage
+          python3 - <<'PY'
+          import sys, xml.etree.ElementTree as ET, glob
+          files = glob.glob('coverage/*/coverage.cobertura.xml')
+          if not files:
+              print("No coverage report found.", file=sys.stderr)
+              sys.exit(1)
+          rate = float(ET.parse(files[0]).getroot().attrib['line-rate'])
+          print(f"line coverage = {rate:.4f}")
+          if rate < 0.90:
+              print(f"FAIL: line coverage {rate:.4f} below threshold 0.90", file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - name: Lint
+        run: dotnet format --verify-no-changes --no-restore
+
+      - name: Release build
+        run: dotnet build --no-restore --configuration Release

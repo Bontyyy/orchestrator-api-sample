@@ -1,0 +1,32 @@
+# Verification contract for this component repo, consumed by the component
+# agent verification skill (agents/component/skills/verification/SKILL.md in
+# the orchestration repo).
+#
+# Six gates are declared. Order below is the execution order the skill uses:
+# cheaper gates fail fast, expensive gates run only once earlier ones pass.
+#
+# security_scan is marked `not_yet_configured` with a tracking issue per the
+# skill's convention. Tasks in this repo cannot pass verification until that
+# tracking issue closes and this gate is filled with a real scan command.
+
+tests:
+  command: "dotnet test --no-build --nologo --verbosity normal"
+  passing_pattern: "Passed!"
+
+coverage:
+  command: "dotnet test --no-build --nologo --collect:'XPlat Code Coverage' --results-directory ./coverage"
+  report_path: "./coverage"
+  minimum_line_coverage: 0.90
+
+compiler_warnings:
+  command: "dotnet build --no-restore /warnaserror"
+
+lint:
+  command: "dotnet format --verify-no-changes --no-restore"
+
+security_scan:
+  status: not_yet_configured
+  tracking_issue: Bontyyy/orchestrator-api-sample#1
+
+build:
+  command: "dotnet build --no-restore --configuration Release"

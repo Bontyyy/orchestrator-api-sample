@@ -1,0 +1,30 @@
+# .NET build output
+bin/
+obj/
+out/
+*.dll
+*.exe
+*.pdb
+
+# Coverage reports
+coverage/
+*.coverage
+*.cobertura.xml
+*.opencover.xml
+TestResults/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# NuGet
+*.nupkg
+.nuget/
+packages/
