@@ -1,0 +1,18 @@
+# Template coverage declaration for orchestrator-api-sample.
+#
+# Consumed by the orchestrator's PM template-coverage-check skill
+# (agents/pm/skills/template-coverage-check/SKILL.md) at feature-planning
+# time. Declares which generator-template categories this repo supports.
+#
+# Token vocabulary is free-form kebab-case at v1 — no central registry
+# until Phase 5. The tokens below match the api-sided tokens used in the
+# skill's worked examples.
+
+schema_version: 1
+
+provided_templates:
+  - api-controller
+  - api-request-validator
+  - api-response-serializer
+  - test-plan
+  - test-runner
