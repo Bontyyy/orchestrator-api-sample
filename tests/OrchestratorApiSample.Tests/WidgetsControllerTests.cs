@@ -126,4 +126,92 @@ public sealed class WidgetsControllerTests
         var ok = result.Should().BeOfType<OkObjectResult>().Which;
         ok.Value.Should().BeEquivalentTo(new { count = 2 });
     }
+
+    // AC-1: no page_size → returns HTTP 200 with up to 50 widgets
+    [Fact]
+    public async Task GetList_without_page_size_returns_Ok_with_up_to_50_widgets()
+    {
+        var controller = BuildController();
+        for (var i = 0; i < 60; i++)
+        {
+            await controller.Create(new CreateWidgetRequest($"Widget {i}", $"SKU-{i}", i), CancellationToken.None);
+        }
+
+        var result = await controller.GetList(pageSize: null, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        var widgets = ok.Value.Should().BeAssignableTo<IReadOnlyList<Widget>>().Which;
+        widgets.Should().HaveCount(50);
+    }
+
+    [Fact]
+    public async Task GetList_without_page_size_returns_Ok_when_fewer_than_50_widgets_exist()
+    {
+        var controller = BuildController();
+        await controller.Create(new CreateWidgetRequest("Widget A", "SKU-A", 1), CancellationToken.None);
+        await controller.Create(new CreateWidgetRequest("Widget B", "SKU-B", 2), CancellationToken.None);
+
+        var result = await controller.GetList(pageSize: null, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        var widgets = ok.Value.Should().BeAssignableTo<IReadOnlyList<Widget>>().Which;
+        widgets.Should().HaveCount(2);
+    }
+
+    // AC-2: page_size=N with 1 ≤ N ≤ 500 → returns HTTP 200 with up to N widgets
+    [Theory]
+    [InlineData(1)]
+    [InlineData(10)]
+    [InlineData(500)]
+    public async Task GetList_with_valid_page_size_returns_Ok_with_up_to_N_widgets(int pageSize)
+    {
+        var controller = BuildController();
+        for (var i = 0; i < 10; i++)
+        {
+            await controller.Create(new CreateWidgetRequest($"Widget {i}", $"SKU-{i}", i), CancellationToken.None);
+        }
+
+        var result = await controller.GetList(pageSize: pageSize, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        var widgets = ok.Value.Should().BeAssignableTo<IReadOnlyList<Widget>>().Which;
+        widgets.Count.Should().BeLessThanOrEqualTo(pageSize);
+    }
+
+    [Fact]
+    public async Task GetList_with_page_size_10_returns_exactly_10_when_more_exist()
+    {
+        var controller = BuildController();
+        for (var i = 0; i < 20; i++)
+        {
+            await controller.Create(new CreateWidgetRequest($"Widget {i}", $"SKU-{i}", i), CancellationToken.None);
+        }
+
+        var result = await controller.GetList(pageSize: 10, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        var widgets = ok.Value.Should().BeAssignableTo<IReadOnlyList<Widget>>().Which;
+        widgets.Should().HaveCount(10);
+    }
+
+    // AC-3: page_size > 500 → returns HTTP 400 with {"error": {"code": "page_size_over_limit", ...}}
+    [Theory]
+    [InlineData(501)]
+    [InlineData(1000)]
+    [InlineData(int.MaxValue)]
+    public async Task GetList_with_page_size_over_500_returns_BadRequest_with_page_size_over_limit_code(int pageSize)
+    {
+        var controller = BuildController();
+
+        var result = await controller.GetList(pageSize: pageSize, CancellationToken.None);
+
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Which;
+        var body = badRequest.Value!;
+        var errorProp = body.GetType().GetProperty("error");
+        errorProp.Should().NotBeNull();
+        var errorValue = errorProp!.GetValue(body)!;
+        var codeProp = errorValue.GetType().GetProperty("code");
+        codeProp.Should().NotBeNull();
+        codeProp!.GetValue(errorValue).Should().Be("page_size_over_limit");
+    }
 }

@@ -11,4 +11,6 @@ public interface IWidgetRepository
     Task DeleteAsync(string id, CancellationToken cancellationToken);
 
     Task<int> CountAsync(CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<Widget>> GetListAsync(int pageSize, CancellationToken cancellationToken);
 }

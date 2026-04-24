@@ -72,4 +72,14 @@ public sealed class WidgetService
     {
         return _repository.CountAsync(cancellationToken);
     }
+
+    public Task<IReadOnlyList<Widget>> GetListAsync(int pageSize, CancellationToken cancellationToken)
+    {
+        if (pageSize > 500)
+        {
+            throw new ValidationException(nameof(pageSize), "must be at most 500");
+        }
+
+        return _repository.GetListAsync(pageSize, cancellationToken);
+    }
 }
