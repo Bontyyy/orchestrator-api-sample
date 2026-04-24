@@ -67,4 +67,9 @@ public sealed class WidgetService
 
         return _repository.DeleteAsync(id, cancellationToken);
     }
+
+    public Task<int> GetCountAsync(CancellationToken cancellationToken)
+    {
+        return _repository.CountAsync(cancellationToken);
+    }
 }

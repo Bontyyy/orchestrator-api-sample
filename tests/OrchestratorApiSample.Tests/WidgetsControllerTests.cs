@@ -102,4 +102,28 @@ public sealed class WidgetsControllerTests
 
         deleteResult.Should().BeOfType<BadRequestObjectResult>();
     }
+
+    [Fact]
+    public async Task GetCount_with_empty_store_returns_Ok_with_count_zero()
+    {
+        var controller = BuildController();
+
+        var result = await controller.GetCount(CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        ok.Value.Should().BeEquivalentTo(new { count = 0 });
+    }
+
+    [Fact]
+    public async Task GetCount_after_creating_widgets_returns_Ok_with_correct_count()
+    {
+        var controller = BuildController();
+        await controller.Create(new CreateWidgetRequest("Widget A", "SKU-A", 1), CancellationToken.None);
+        await controller.Create(new CreateWidgetRequest("Widget B", "SKU-B", 2), CancellationToken.None);
+
+        var result = await controller.GetCount(CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        ok.Value.Should().BeEquivalentTo(new { count = 2 });
+    }
 }

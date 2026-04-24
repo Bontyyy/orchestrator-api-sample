@@ -45,6 +45,13 @@ public sealed class WidgetsController : ControllerBase
         return widget is null ? NotFound() : Ok(widget);
     }
 
+    [HttpGet("count")]
+    public async Task<IActionResult> GetCount(CancellationToken cancellationToken)
+    {
+        var count = await _service.GetCountAsync(cancellationToken);
+        return Ok(new { count });
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken cancellationToken)
     {
