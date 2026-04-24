@@ -236,4 +236,40 @@ public sealed class WidgetServiceTests
         count.Should().Be(3);
         repo.Verify(r => r.CountAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    // AC-1 / AC-2: valid page sizes delegate to repository
+    [Theory]
+    [InlineData(1)]
+    [InlineData(50)]
+    [InlineData(500)]
+    public async Task GetListAsync_with_valid_page_size_delegates_to_repository(int pageSize)
+    {
+        IReadOnlyList<Widget> stored = new List<Widget> { new Widget("id1", "W", "SKU", 1) };
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.GetListAsync(pageSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stored);
+
+        var service = new WidgetService(repo.Object);
+
+        var result = await service.GetListAsync(pageSize, CancellationToken.None);
+
+        result.Should().BeSameAs(stored);
+        repo.Verify(r => r.GetListAsync(pageSize, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // AC-3: page_size > 500 throws ValidationException before hitting repository
+    [Theory]
+    [InlineData(501)]
+    [InlineData(1000)]
+    public async Task GetListAsync_with_page_size_over_500_throws_ValidationException(int pageSize)
+    {
+        var repo = new Mock<IWidgetRepository>();
+        var service = new WidgetService(repo.Object);
+
+        var act = () => service.GetListAsync(pageSize, CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<ValidationException>();
+        ex.Which.Field.Should().Be("pageSize");
+        repo.Verify(r => r.GetListAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

@@ -30,4 +30,10 @@ public sealed class InMemoryWidgetRepository : IWidgetRepository
     {
         return Task.FromResult(_store.Count);
     }
+
+    public Task<IReadOnlyList<Widget>> GetListAsync(int pageSize, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Widget> result = _store.Values.Take(pageSize).ToList();
+        return Task.FromResult(result);
+    }
 }

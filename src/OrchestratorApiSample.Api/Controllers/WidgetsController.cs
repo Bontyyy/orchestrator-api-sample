@@ -16,6 +16,33 @@ public sealed class WidgetsController : ControllerBase
         _service = service;
     }
 
+    private const int DefaultPageSize = 50;
+
+    [HttpGet]
+    public async Task<IActionResult> GetList(
+        [FromQuery(Name = "page_size")] int? pageSize,
+        CancellationToken cancellationToken)
+    {
+        var effectivePageSize = pageSize ?? DefaultPageSize;
+
+        try
+        {
+            var widgets = await _service.GetListAsync(effectivePageSize, cancellationToken);
+            return Ok(widgets);
+        }
+        catch (ValidationException)
+        {
+            return BadRequest(new
+            {
+                error = new
+                {
+                    code = "page_size_over_limit",
+                    message = $"page_size must be between 1 and 500; received {effectivePageSize}.",
+                },
+            });
+        }
+    }
+
     [HttpPost]
     public async Task<ActionResult<Widget>> Create(
         [FromBody] CreateWidgetRequest request,
