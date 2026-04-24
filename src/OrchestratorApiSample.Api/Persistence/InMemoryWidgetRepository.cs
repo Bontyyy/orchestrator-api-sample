@@ -25,4 +25,9 @@ public sealed class InMemoryWidgetRepository : IWidgetRepository
         _store.TryRemove(id, out _);
         return Task.CompletedTask;
     }
+
+    public Task<int> CountAsync(CancellationToken cancellationToken)
+    {
+        return Task.FromResult(_store.Count);
+    }
 }

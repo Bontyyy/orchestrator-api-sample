@@ -9,4 +9,6 @@ public interface IWidgetRepository
     Task<Widget?> GetByIdAsync(string id, CancellationToken cancellationToken);
 
     Task DeleteAsync(string id, CancellationToken cancellationToken);
+
+    Task<int> CountAsync(CancellationToken cancellationToken);
 }

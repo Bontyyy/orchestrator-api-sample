@@ -206,4 +206,34 @@ public sealed class WidgetServiceTests
         ex.Which.Field.Should().Be("id");
         repo.Verify(r => r.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task GetCountAsync_with_zero_widgets_returns_zero()
+    {
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.CountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+
+        var service = new WidgetService(repo.Object);
+
+        var count = await service.GetCountAsync(CancellationToken.None);
+
+        count.Should().Be(0);
+        repo.Verify(r => r.CountAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetCountAsync_with_n_widgets_returns_n()
+    {
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.CountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(3);
+
+        var service = new WidgetService(repo.Object);
+
+        var count = await service.GetCountAsync(CancellationToken.None);
+
+        count.Should().Be(3);
+        repo.Verify(r => r.CountAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
 }
