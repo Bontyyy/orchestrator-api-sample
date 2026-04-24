@@ -16,14 +16,14 @@ public sealed class WidgetsController : ControllerBase
         _service = service;
     }
 
-    private const int DefaultPageSize = 50;
+    private const int _defaultPageSize = 50;
 
     [HttpGet]
     public async Task<IActionResult> GetList(
         [FromQuery(Name = "page_size")] int? pageSize,
         CancellationToken cancellationToken)
     {
-        var effectivePageSize = pageSize ?? DefaultPageSize;
+        var effectivePageSize = pageSize ?? _defaultPageSize;
 
         try
         {
