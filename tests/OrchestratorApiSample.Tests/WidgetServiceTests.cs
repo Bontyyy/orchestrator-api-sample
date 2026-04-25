@@ -272,4 +272,159 @@ public sealed class WidgetServiceTests
         ex.Which.Field.Should().Be("pageSize");
         repo.Verify(r => r.GetListAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    // UpdateAsync — valid partial updates delegate to repository and return updated widget
+    [Fact]
+    public async Task UpdateAsync_name_only_updates_name_and_leaves_other_fields_unchanged()
+    {
+        var existing = new Widget("id1", "OldName", "SKU-001", 5);
+        var updated = existing with { Name = "NewName" };
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.UpdateAsync("id1", "NewName", null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(updated);
+
+        var service = new WidgetService(repo.Object);
+
+        var result = await service.UpdateAsync("id1", "NewName", null, null, CancellationToken.None);
+
+        result.Should().Be(updated);
+        repo.Verify(r => r.UpdateAsync("id1", "NewName", null, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_sku_only_updates_sku_and_leaves_other_fields_unchanged()
+    {
+        var existing = new Widget("id1", "Name", "OLD-SKU", 5);
+        var updated = existing with { Sku = "NEW-SKU" };
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.UpdateAsync("id1", null, "NEW-SKU", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(updated);
+
+        var service = new WidgetService(repo.Object);
+
+        var result = await service.UpdateAsync("id1", null, "NEW-SKU", null, CancellationToken.None);
+
+        result.Should().Be(updated);
+        repo.Verify(r => r.UpdateAsync("id1", null, "NEW-SKU", null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_quantity_only_updates_quantity_and_leaves_other_fields_unchanged()
+    {
+        var existing = new Widget("id1", "Name", "SKU-001", 5);
+        var updated = existing with { Quantity = 42 };
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.UpdateAsync("id1", null, null, 42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(updated);
+
+        var service = new WidgetService(repo.Object);
+
+        var result = await service.UpdateAsync("id1", null, null, 42, CancellationToken.None);
+
+        result.Should().Be(updated);
+        repo.Verify(r => r.UpdateAsync("id1", null, null, 42, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_all_fields_updates_all_fields()
+    {
+        var updated = new Widget("id1", "NewName", "NEW-SKU", 100);
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.UpdateAsync("id1", "NewName", "NEW-SKU", 100, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(updated);
+
+        var service = new WidgetService(repo.Object);
+
+        var result = await service.UpdateAsync("id1", "NewName", "NEW-SKU", 100, CancellationToken.None);
+
+        result.Should().Be(updated);
+        repo.Verify(r => r.UpdateAsync("id1", "NewName", "NEW-SKU", 100, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_with_unknown_id_returns_null()
+    {
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.UpdateAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Widget?)null);
+
+        var service = new WidgetService(repo.Object);
+
+        var result = await service.UpdateAsync("nonexistent", "NewName", null, null, CancellationToken.None);
+
+        result.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdateAsync_with_blank_name_throws_ValidationException_before_hitting_repository(string name)
+    {
+        var repo = new Mock<IWidgetRepository>();
+        var service = new WidgetService(repo.Object);
+
+        var act = () => service.UpdateAsync("id1", name, null, null, CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<ValidationException>();
+        ex.Which.Field.Should().Be("name");
+        repo.Verify(r => r.UpdateAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdateAsync_with_blank_sku_throws_ValidationException_before_hitting_repository(string sku)
+    {
+        var repo = new Mock<IWidgetRepository>();
+        var service = new WidgetService(repo.Object);
+
+        var act = () => service.UpdateAsync("id1", null, sku, null, CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<ValidationException>();
+        ex.Which.Field.Should().Be("sku");
+        repo.Verify(r => r.UpdateAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_with_negative_quantity_throws_ValidationException_before_hitting_repository()
+    {
+        var repo = new Mock<IWidgetRepository>();
+        var service = new WidgetService(repo.Object);
+
+        var act = () => service.UpdateAsync("id1", null, null, -1, CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<ValidationException>();
+        ex.Which.Field.Should().Be("quantity");
+        repo.Verify(r => r.UpdateAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_with_quantity_above_ceiling_throws_ValidationException_before_hitting_repository()
+    {
+        var repo = new Mock<IWidgetRepository>();
+        var service = new WidgetService(repo.Object);
+
+        var act = () => service.UpdateAsync("id1", null, null, 10_001, CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<ValidationException>();
+        ex.Which.Field.Should().Be("quantity");
+        ex.Which.Reason.Should().Be("must be at most 10000");
+        repo.Verify(r => r.UpdateAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_trims_whitespace_from_name_when_provided()
+    {
+        var updated = new Widget("id1", "NewName", "SKU-001", 5);
+        var repo = new Mock<IWidgetRepository>();
+        repo.Setup(r => r.UpdateAsync("id1", "NewName", null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(updated);
+
+        var service = new WidgetService(repo.Object);
+
+        var result = await service.UpdateAsync("id1", "  NewName  ", null, null, CancellationToken.None);
+
+        result.Should().Be(updated);
+        repo.Verify(r => r.UpdateAsync("id1", "NewName", null, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

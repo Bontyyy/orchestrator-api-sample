@@ -13,4 +13,6 @@ public interface IWidgetRepository
     Task<int> CountAsync(CancellationToken cancellationToken);
 
     Task<IReadOnlyList<Widget>> GetListAsync(int pageSize, CancellationToken cancellationToken);
+
+    Task<Widget?> UpdateAsync(string id, string? name, string? sku, int? quantity, CancellationToken cancellationToken);
 }
