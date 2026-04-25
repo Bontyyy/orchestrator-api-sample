@@ -94,6 +94,46 @@ public sealed class WidgetsController : ControllerBase
         }
     }
 
+    [HttpPost("bulk")]
+    public async Task<IActionResult> BulkCreate(
+        [FromBody] IReadOnlyList<CreateWidgetRequest> requests,
+        CancellationToken cancellationToken)
+    {
+        var items = requests
+            .Select(r => new BulkCreateItem(r.Name, r.Sku, r.Quantity))
+            .ToList();
+
+        var result = await _service.BulkCreateAsync(items, cancellationToken);
+
+        return result.ResultOutcome switch
+        {
+            BulkCreateResult.Outcome.Created =>
+                StatusCode(201, result.CreatedWidgets),
+
+            BulkCreateResult.Outcome.BatchSizeExceeded =>
+                BadRequest(new
+                {
+                    error = new
+                    {
+                        code = "batch_size_exceeded",
+                        message = $"Batch size of {result.ReceivedCount} exceeds the maximum allowed limit of {result.MaxAllowed} items.",
+                    },
+                }),
+
+            BulkCreateResult.Outcome.ValidationFailure =>
+                UnprocessableEntity(new
+                {
+                    error = new
+                    {
+                        code = "batch_validation_failure",
+                        failures = result.Failures.Select(f => new { index = f.Index, reason = f.Reason }).ToArray(),
+                    },
+                }),
+
+            _ => StatusCode(500),
+        };
+    }
+
     [HttpPatch("{id}")]
     public async Task<IActionResult> Update(
         string id,
