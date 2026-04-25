@@ -83,6 +83,66 @@ public sealed class WidgetService
         return _repository.GetListAsync(pageSize, cancellationToken);
     }
 
+    public const int BulkCreateMaxBatchSize = 50;
+
+    /// <summary>
+    /// Validates all items first (atomically) and, if all pass, persists them all.
+    /// Returns a <see cref="BulkCreateResult"/> that distinguishes three outcomes:
+    /// batch-size overflow, validation failure, and success.
+    /// </summary>
+    public async Task<BulkCreateResult> BulkCreateAsync(
+        IReadOnlyList<BulkCreateItem> items,
+        CancellationToken cancellationToken)
+    {
+        if (items.Count > BulkCreateMaxBatchSize)
+        {
+            return BulkCreateResult.BatchSizeExceeded(items.Count, BulkCreateMaxBatchSize);
+        }
+
+        // Validate all items first — atomicity requires no persistence on any failure.
+        var failures = new List<BulkCreateFailure>();
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            if (string.IsNullOrWhiteSpace(item.Name))
+            {
+                failures.Add(new BulkCreateFailure(i, "name must not be empty"));
+            }
+            else if (string.IsNullOrWhiteSpace(item.Sku))
+            {
+                failures.Add(new BulkCreateFailure(i, "sku must not be empty"));
+            }
+            else if (item.Quantity < 0)
+            {
+                failures.Add(new BulkCreateFailure(i, "quantity must be non-negative"));
+            }
+            else if (item.Quantity > 10_000)
+            {
+                failures.Add(new BulkCreateFailure(i, "quantity must be at most 10000"));
+            }
+        }
+
+        if (failures.Count > 0)
+        {
+            return BulkCreateResult.ValidationFailure(failures);
+        }
+
+        // All items validated — persist them all.
+        var created = new List<Widget>(items.Count);
+        foreach (var item in items)
+        {
+            var widget = new Widget(
+                Id: Guid.NewGuid().ToString("N"),
+                Name: item.Name.Trim(),
+                Sku: item.Sku.Trim(),
+                Quantity: item.Quantity);
+            var stored = await _repository.AddAsync(widget, cancellationToken);
+            created.Add(stored);
+        }
+
+        return BulkCreateResult.Success(created);
+    }
+
     public Task<Widget?> UpdateAsync(
         string id,
         string? name,
