@@ -93,6 +93,43 @@ public sealed class WidgetsController : ControllerBase
             return BadRequest(new { error = "validation_failed", field = ex.Field, reason = ex.Reason });
         }
     }
+
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> Update(
+        string id,
+        [FromBody] UpdateWidgetRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var widget = await _service.UpdateAsync(
+                id,
+                request.Name,
+                request.Sku,
+                request.Quantity,
+                cancellationToken);
+
+            if (widget is null)
+            {
+                return NotFound(new
+                {
+                    error = new
+                    {
+                        code = "widget_not_found",
+                        message = $"Widget with id '{id}' was not found.",
+                    },
+                });
+            }
+
+            return Ok(widget);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { error = "validation_failed", field = ex.Field, reason = ex.Reason });
+        }
+    }
 }
 
 public sealed record CreateWidgetRequest(string Name, string Sku, int Quantity);
+
+public sealed record UpdateWidgetRequest(string? Name, string? Sku, int? Quantity);

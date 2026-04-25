@@ -214,4 +214,128 @@ public sealed class WidgetsControllerTests
         codeProp.Should().NotBeNull();
         codeProp!.GetValue(errorValue).Should().Be("page_size_over_limit");
     }
+
+    // PATCH /widgets/:id — AC-1: valid partial update returns 200 with updated widget
+    [Fact]
+    public async Task Update_with_name_only_returns_Ok_with_updated_widget()
+    {
+        var controller = BuildController();
+        var createResult = await controller.Create(
+            new CreateWidgetRequest("OriginalName", "SKU-001", 10),
+            CancellationToken.None);
+        var createdWidget = ((CreatedAtActionResult)createResult.Result!).Value as Widget;
+
+        var result = await controller.Update(
+            createdWidget!.Id,
+            new UpdateWidgetRequest("UpdatedName", null, null),
+            CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        var widget = ok.Value.Should().BeOfType<Widget>().Which;
+        widget.Name.Should().Be("UpdatedName");
+        widget.Sku.Should().Be("SKU-001");
+        widget.Quantity.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task Update_with_sku_only_returns_Ok_with_updated_widget()
+    {
+        var controller = BuildController();
+        var createResult = await controller.Create(
+            new CreateWidgetRequest("Name", "OLD-SKU", 10),
+            CancellationToken.None);
+        var createdWidget = ((CreatedAtActionResult)createResult.Result!).Value as Widget;
+
+        var result = await controller.Update(
+            createdWidget!.Id,
+            new UpdateWidgetRequest(null, "NEW-SKU", null),
+            CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        var widget = ok.Value.Should().BeOfType<Widget>().Which;
+        widget.Name.Should().Be("Name");
+        widget.Sku.Should().Be("NEW-SKU");
+        widget.Quantity.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task Update_with_quantity_only_returns_Ok_with_updated_widget()
+    {
+        var controller = BuildController();
+        var createResult = await controller.Create(
+            new CreateWidgetRequest("Name", "SKU-001", 5),
+            CancellationToken.None);
+        var createdWidget = ((CreatedAtActionResult)createResult.Result!).Value as Widget;
+
+        var result = await controller.Update(
+            createdWidget!.Id,
+            new UpdateWidgetRequest(null, null, 999),
+            CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        var widget = ok.Value.Should().BeOfType<Widget>().Which;
+        widget.Name.Should().Be("Name");
+        widget.Sku.Should().Be("SKU-001");
+        widget.Quantity.Should().Be(999);
+    }
+
+    [Fact]
+    public async Task Update_with_all_fields_returns_Ok_with_all_fields_updated()
+    {
+        var controller = BuildController();
+        var createResult = await controller.Create(
+            new CreateWidgetRequest("OldName", "OLD-SKU", 1),
+            CancellationToken.None);
+        var createdWidget = ((CreatedAtActionResult)createResult.Result!).Value as Widget;
+
+        var result = await controller.Update(
+            createdWidget!.Id,
+            new UpdateWidgetRequest("NewName", "NEW-SKU", 42),
+            CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        var widget = ok.Value.Should().BeOfType<Widget>().Which;
+        widget.Name.Should().Be("NewName");
+        widget.Sku.Should().Be("NEW-SKU");
+        widget.Quantity.Should().Be(42);
+    }
+
+    // PATCH /widgets/:id — AC-2: unknown id returns 404 with error.code == "widget_not_found"
+    [Fact]
+    public async Task Update_with_unknown_id_returns_NotFound_with_widget_not_found_code()
+    {
+        var controller = BuildController();
+
+        var result = await controller.Update(
+            "nonexistent-id",
+            new UpdateWidgetRequest("NewName", null, null),
+            CancellationToken.None);
+
+        var notFound = result.Should().BeOfType<NotFoundObjectResult>().Which;
+        var body = notFound.Value!;
+        var errorProp = body.GetType().GetProperty("error");
+        errorProp.Should().NotBeNull();
+        var errorValue = errorProp!.GetValue(body)!;
+        var codeProp = errorValue.GetType().GetProperty("code");
+        codeProp.Should().NotBeNull();
+        codeProp!.GetValue(errorValue).Should().Be("widget_not_found");
+    }
+
+    // PATCH /widgets/:id — AC-3 (via issue): validation failure returns 400
+    [Fact]
+    public async Task Update_with_blank_name_returns_BadRequest_with_field_info()
+    {
+        var controller = BuildController();
+        var createResult = await controller.Create(
+            new CreateWidgetRequest("Name", "SKU-001", 5),
+            CancellationToken.None);
+        var createdWidget = ((CreatedAtActionResult)createResult.Result!).Value as Widget;
+
+        var result = await controller.Update(
+            createdWidget!.Id,
+            new UpdateWidgetRequest("", null, null),
+            CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
 }

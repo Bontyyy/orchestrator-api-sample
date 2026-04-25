@@ -82,4 +82,37 @@ public sealed class WidgetService
 
         return _repository.GetListAsync(pageSize, cancellationToken);
     }
+
+    public Task<Widget?> UpdateAsync(
+        string id,
+        string? name,
+        string? sku,
+        int? quantity,
+        CancellationToken cancellationToken)
+    {
+        if (name is not null && string.IsNullOrWhiteSpace(name))
+        {
+            throw new ValidationException(nameof(name), "must not be empty");
+        }
+
+        if (sku is not null && string.IsNullOrWhiteSpace(sku))
+        {
+            throw new ValidationException(nameof(sku), "must not be empty");
+        }
+
+        if (quantity is not null && quantity < 0)
+        {
+            throw new ValidationException(nameof(quantity), "must be non-negative");
+        }
+
+        if (quantity is not null && quantity > 10_000)
+        {
+            throw new ValidationException(nameof(quantity), "must be at most 10000");
+        }
+
+        var resolvedName = name?.Trim();
+        var resolvedSku = sku?.Trim();
+
+        return _repository.UpdateAsync(id, resolvedName, resolvedSku, quantity, cancellationToken);
+    }
 }

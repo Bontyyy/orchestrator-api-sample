@@ -36,4 +36,22 @@ public sealed class InMemoryWidgetRepository : IWidgetRepository
         IReadOnlyList<Widget> result = _store.Values.Take(pageSize).ToList();
         return Task.FromResult(result);
     }
+
+    public Task<Widget?> UpdateAsync(string id, string? name, string? sku, int? quantity, CancellationToken cancellationToken)
+    {
+        if (!_store.TryGetValue(id, out var existing))
+        {
+            return Task.FromResult<Widget?>(null);
+        }
+
+        var updated = existing with
+        {
+            Name = name ?? existing.Name,
+            Sku = sku ?? existing.Sku,
+            Quantity = quantity ?? existing.Quantity,
+        };
+
+        _store[id] = updated;
+        return Task.FromResult<Widget?>(updated);
+    }
 }
