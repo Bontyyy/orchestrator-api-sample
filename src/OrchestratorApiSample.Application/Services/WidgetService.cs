@@ -99,9 +99,8 @@ public sealed class WidgetService
             return BulkCreateResult.BatchSizeExceeded(items.Count, BulkCreateMaxBatchSize);
         }
 
-        // Validate and persist items.
+        // Pass 1: validate ALL items before persisting any.
         var failures = new List<BulkCreateFailure>();
-        var created = new List<Widget>(items.Count);
         for (var i = 0; i < items.Count; i++)
         {
             var item = items[i];
@@ -121,21 +120,25 @@ public sealed class WidgetService
             {
                 failures.Add(new BulkCreateFailure(i, "quantity must be at most 10000"));
             }
-            else
-            {
-                var widget = new Widget(
-                    Id: Guid.NewGuid().ToString("N"),
-                    Name: item.Name.Trim(),
-                    Sku: item.Sku.Trim(),
-                    Quantity: item.Quantity);
-                var stored = await _repository.AddAsync(widget, cancellationToken);
-                created.Add(stored);
-            }
         }
 
         if (failures.Count > 0)
         {
             return BulkCreateResult.ValidationFailure(failures);
+        }
+
+        // Pass 2: all items are valid — persist them all.
+        var created = new List<Widget>(items.Count);
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var widget = new Widget(
+                Id: Guid.NewGuid().ToString("N"),
+                Name: item.Name.Trim(),
+                Sku: item.Sku.Trim(),
+                Quantity: item.Quantity);
+            var stored = await _repository.AddAsync(widget, cancellationToken);
+            created.Add(stored);
         }
 
         return BulkCreateResult.Success(created);
